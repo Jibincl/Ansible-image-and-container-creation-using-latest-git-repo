@@ -230,3 +230,12 @@ PLAY RECAP *********************************************************************
 
 ~~~
 
+
+![image](https://user-images.githubusercontent.com/100774483/165181400-960f4d30-4473-4ee9-a88f-d7972e8e68ca.png)
+
+
+## Conclusion
+
+In this tutorial, we discussed about creating docker image and container associated from latest git repo. If developer do any change on the dockerfile which placed on git. This will recreate the image and container without skipping.
+
+
