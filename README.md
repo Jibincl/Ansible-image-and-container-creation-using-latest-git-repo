@@ -176,57 +176,70 @@ PLAY RECAP *********************************************************************
 After running the playbook, we could see that container is created on the client server
 
 ~~~
- docker container ls
-CONTAINER ID   IMAGE                     COMMAND            CREATED          STATUS          PORTS                  NAMES
-382bd2d074cc   jibincl/flaskrep:latest   "python3 app.py"   32 minutes ago   Up 32 minutes   0.0.0.0:80->5000/tcp   flaskapp
-~~~
-
-If we run the same whithout any changes on docker image repository, it will skip the creation and build
-
-~~~
- ansible-playbook -i hosts main.yml
-
-PLAY [Building Docker Image and container from git] *****************************************************************************************************************************************
+ PLAY [Building Docker Image and container from git] *****************************************************************************************************************************************
 
 TASK [Gathering Facts] **********************************************************************************************************************************************************************
-[WARNING]: Platform linux on host 3.145.85.53 is using the discovered Python interpreter at /usr/bin/python, but future installation of another Python interpreter could change this. See
+[WARNING]: Platform linux on host 18.118.254.184 is using the discovered Python interpreter at /usr/bin/python, but future installation of another Python interpreter could change this. See
 https://docs.ansible.com/ansible/2.9/reference_appendices/interpreter_discovery.html for more information.
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [installing packages] ******************************************************************************************************************************************************************
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [Installing docker client for python] **************************************************************************************************************************************************
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [adding ec2-user to docker group] ******************************************************************************************************************************************************
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [Restarting/enabling Docker] ***********************************************************************************************************************************************************
-changed: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [Clonning the repo using https://github.com/Jibincl/devops-flask.git] ******************************************************************************************************************
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [Logging into the docker-hub official] *************************************************************************************************************************************************
-ok: [3.145.85.53]
+skipping: [18.118.254.184]
 
 TASK [Creating docker Image and push to hub] ************************************************************************************************************************************************
-skipping: [3.145.85.53] => (item=b1b43b0ab696b2102253a5a83ad6e6664d94e036)
-skipping: [3.145.85.53] => (item=latest)
+skipping: [18.118.254.184] => (item=0bcb64af45783c5098e61f0adf8b8b76205793c5)
+skipping: [18.118.254.184] => (item=latest)
 
-TASK [Deleting Local Image From Build Server] ***********************************************************************************************************************************************
-skipping: [3.145.85.53] => (item=b1b43b0ab696b2102253a5a83ad6e6664d94e036)
-skipping: [3.145.85.53] => (item=latest)
+TASK [Logout from hub] **********************************************************************************************************************************************************************
+skipping: [18.118.254.184]
+
+TASK [Removing docker image from build server] **********************************************************************************************************************************************
+skipping: [18.118.254.184] => (item=0bcb64af45783c5098e61f0adf8b8b76205793c5)
+skipping: [18.118.254.184] => (item=latest)
+
+PLAY [creating container in build server] ***************************************************************************************************************************************************
+
+TASK [Gathering Facts] **********************************************************************************************************************************************************************
+[WARNING]: Platform linux on host 3.145.56.23 is using the discovered Python interpreter at /usr/bin/python, but future installation of another Python interpreter could change this. See
+https://docs.ansible.com/ansible/2.9/reference_appendices/interpreter_discovery.html for more information.
+ok: [3.145.56.23]
+
+TASK [installing packages] ******************************************************************************************************************************************************************
+ok: [3.145.56.23]
+
+TASK [Installing docker client for python] **************************************************************************************************************************************************
+ok: [3.145.56.23]
+
+TASK [adding ec2-user to docker group] ******************************************************************************************************************************************************
+ok: [3.145.56.23]
+
+TASK [Restarting/enabling Docker] ***********************************************************************************************************************************************************
+ok: [3.145.56.23]
 
 TASK [Pulling the docker Image from hub] ****************************************************************************************************************************************************
-ok: [3.145.85.53]
+ok: [3.145.56.23]
 
 TASK [Creating the Container from pulled image] *********************************************************************************************************************************************
-skipping: [3.145.85.53]
+skipping: [3.145.56.23]
 
 PLAY RECAP **********************************************************************************************************************************************************************************
-3.145.85.53                : ok=8    changed=1    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0
+18.118.254.184             : ok=6    changed=0    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0
+3.145.56.23                : ok=6    changed=0    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
 
 ~~~
 
