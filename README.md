@@ -1,8 +1,8 @@
 # Ansible-image-and-container-creation-using-latest-git-repo
 
 
-### Description
-On this repository, we are going to discuss on how to create a docker image and container associated from latest git repo.
+## Description
+On this repository, we are going to discuss on how to create a docker image and container associated from latest git repo. Iam using a build server to create the image and a test server to create the container.
 
 ### Ansible Modules used
 1. yum
@@ -23,22 +23,35 @@ ansible-playbook -i hosts main.yml
 
 ### Behind the code
 
+### Ansible Hosts file
+
+~~~
+[build]
+
+18.118.254.184 ansible_user="ec2-user" ansible_port=22 ansible_ssh_private_key_file="key.pem"
+
+[test]
+
+3.145.56.23 ansible_user="ec2-user" ansible_port=22 ansible_ssh_private_key_file="key.pem"
+
+~~~
+
 ~~~
 ---
 
-- name: "Building Docker Image and container from git"
-  hosts: all
+- name: "Building Docker Image in build server"
+  hosts: build
   become: true
   vars:
     packages:
       - git
       - pip
       - docker
-    repo_url: "https://github.com/Jibincl/git-flask-app.git"           ## The git repo url which we are using to the build the docker image
-    repo_dir: "/home/ec2-user/flaskapp/"                               ## The new repo will get cloned on remote location /home/ec2-user/flaskapp/
+    repo_url: "https://github.com/Jibincl/devops-flask.git"
+    repo_dir: "/home/ec2-user/flaskapp/"
     docker_user: "jibincl"
     docker_password: "dEe5SH2ujB58ezt"
-    image_name: "jibincl/flaskrep"                                     ## Image name which you wanted to set
+    image_name: "jibincl/flaskrep"
 
   tasks:
     - name: " installing packages"
@@ -46,11 +59,11 @@ ansible-playbook -i hosts main.yml
         name: "{{ packages }}"
         state: present
 
-    - name: "Installing docker client for python"                       ## For docker python communication                 
+    - name: "Installing docker client for python"
       pip:
         name: docker-py
 
-    - name: "adding ec2-user to docker group"                           ## For user "ec2-user" to access the remote meachine docker service
+    - name: "adding ec2-user to docker group"
       user:
         name: "ec2-user"
         groups:
@@ -61,24 +74,25 @@ ansible-playbook -i hosts main.yml
     - name: "Restarting/enabling Docker"
       service:
         name: docker
-        state: restarted
+        state: started
         enabled: true
 
-    - name: "Clonning the repo using {{ repo_url }}"               ## Clonning the repo 
+    - name: "Clonning the repo using {{ repo_url }}"
       git:
         repo: "{{repo_url}}"
         dest: "{{ repo_dir }}"
       register: git_status
 
 
-    - name: "Logging into the docker-hub official"                 ## Accessing the docker hub to push the new building images
+    - name: "Logging into the docker-hub official"
+      when: git_status.changed == true
       docker_login:
         username: "{{ docker_user }}"
         password: "{{ docker_password }}"
-        state: present
 
 
-    - name: "Creating docker Image and push to hub"                 ## Image created using the repo files and pushed to docker hub
+
+    - name: "Creating docker Image and push to hub"
       when: git_status.changed == true
       docker_image:
         source: build
@@ -94,24 +108,66 @@ ansible-playbook -i hosts main.yml
         - "{{ git_status.after }}"
         - latest
 
-    - name: "Deleting Local Image From Build Server"            ## Deleting the unused image
+    - name: "Logout from hub"
+      when: git_status.changed == true
+      docker_login:
+        username: "{{ docker_user }}"
+        password: "{{ docker_password }}"
+        state: absent
+
+    - name: "Removing docker image from build server"
       when: git_status.changed == true
       docker_image:
-        state: absent
+
         name: "{{ image_name }}"
         tag: "{{ item }}"
+        state: absent
       with_items:
         - "{{ git_status.after }}"
         - latest
 
-    - name: "Pulling the docker Image from hub "                ## After all image creation and push. we are pulling the latest image from hub
+
+- name: "creating container in test server"
+  hosts: test
+  become: true
+  vars:
+    packages:
+      - pip
+      - docker
+    image_name: "jibincl/flaskrep"
+  tasks:
+    - name: " installing packages"
+      yum:
+        name: "{{ packages }}"
+        state: present
+
+    - name: "Installing docker client for python"
+      pip:
+        name: docker-py
+
+    - name: "adding ec2-user to docker group"
+      user:
+        name: "ec2-user"
+        groups:
+          - docker
+        append: true
+
+
+    - name: "Restarting/enabling Docker"
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+
+    - name: "Pulling the docker Image from hub "
       docker_image:
-        name: "jibincl/flaskrep:latest"
+        name: "{{image_name}}:latest"
         source: pull
         force_source: true
       register: image_status
 
-    - name: " Creating the Container from pulled image"        ## Creating container from the latest image which docker pulled from the hub 
+    - name: " Creating the Container from pulled image"
       when: image_status.changed == true
       docker_container:
         name: flaskapp
@@ -119,7 +175,7 @@ ansible-playbook -i hosts main.yml
         recreate: yes
         pull: yes
         published_ports:
-          - "81:5000"
+          - "80:5000"
 ~~~
 
 
@@ -132,48 +188,83 @@ ansible-playbook -i hosts main.yml
 PLAY [Building Docker Image and container from git] *****************************************************************************************************************************************
 
 TASK [Gathering Facts] **********************************************************************************************************************************************************************
-[WARNING]: Platform linux on host 3.145.85.53 is using the discovered Python interpreter at /usr/bin/python, but future installation of another Python interpreter could change this. See
+[WARNING]: Platform linux on host 18.118.254.184 is using the discovered Python interpreter at /usr/bin/python, but future installation of another Python interpreter could change this. See
 https://docs.ansible.com/ansible/2.9/reference_appendices/interpreter_discovery.html for more information.
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [installing packages] ******************************************************************************************************************************************************************
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [Installing docker client for python] **************************************************************************************************************************************************
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [adding ec2-user to docker group] ******************************************************************************************************************************************************
-ok: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [Restarting/enabling Docker] ***********************************************************************************************************************************************************
-changed: [3.145.85.53]
+ok: [18.118.254.184]
 
 TASK [Clonning the repo using https://github.com/Jibincl/devops-flask.git] ******************************************************************************************************************
-changed: [3.145.85.53]
+changed: [18.118.254.184]
 
 TASK [Logging into the docker-hub official] *************************************************************************************************************************************************
-ok: [3.145.85.53]
+changed: [18.118.254.184]
 
 TASK [Creating docker Image and push to hub] ************************************************************************************************************************************************
-changed: [3.145.85.53] => (item=b1b43b0ab696b2102253a5a83ad6e6664d94e036)
-ok: [3.145.85.53] => (item=latest)
+changed: [18.118.254.184] => (item=ad2b2bbc4d13f74b58f5d90308215cd2c61d43b1)
+ok: [18.118.254.184] => (item=latest)
 
-TASK [Deleting Local Image From Build Server] ***********************************************************************************************************************************************
-changed: [3.145.85.53] => (item=b1b43b0ab696b2102253a5a83ad6e6664d94e036)
-changed: [3.145.85.53] => (item=latest)
+TASK [Logout from hub] **********************************************************************************************************************************************************************
+changed: [18.118.254.184]
+
+TASK [Removing docker image from build server] **********************************************************************************************************************************************
+changed: [18.118.254.184] => (item=ad2b2bbc4d13f74b58f5d90308215cd2c61d43b1)
+changed: [18.118.254.184] => (item=latest)
+
+PLAY [creating container in build server] ***************************************************************************************************************************************************
+
+TASK [Gathering Facts] **********************************************************************************************************************************************************************
+[WARNING]: Platform linux on host 3.145.56.23 is using the discovered Python interpreter at /usr/bin/python, but future installation of another Python interpreter could change this. See
+https://docs.ansible.com/ansible/2.9/reference_appendices/interpreter_discovery.html for more information.
+ok: [3.145.56.23]
+
+TASK [installing packages] ******************************************************************************************************************************************************************
+ok: [3.145.56.23]
+
+TASK [Installing docker client for python] **************************************************************************************************************************************************
+ok: [3.145.56.23]
+
+TASK [adding ec2-user to docker group] ******************************************************************************************************************************************************
+ok: [3.145.56.23]
+
+TASK [Restarting/enabling Docker] ***********************************************************************************************************************************************************
+ok: [3.145.56.23]
 
 TASK [Pulling the docker Image from hub] ****************************************************************************************************************************************************
-changed: [3.145.85.53]
+changed: [3.145.56.23]
 
 TASK [Creating the Container from pulled image] *********************************************************************************************************************************************
-changed: [3.145.85.53]
+changed: [3.145.56.23]
 
 PLAY RECAP **********************************************************************************************************************************************************************************
-3.145.85.53                : ok=11   changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+18.118.254.184             : ok=10   changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+3.145.56.23                : ok=7    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+
 ~~~
 
 
 After running the playbook, we could see that container is created on the client server
+
+
+~~~
+#docker container ls
+
+CONTAINER ID   IMAGE                     COMMAND            CREATED         STATUS         PORTS                  NAMES
+c68a5ece9750   jibincl/flaskrep:latest   "python3 app.py"   3 minutes ago   Up 3 minutes   0.0.0.0:80->5000/tcp   flaskapp
+~~~
+
+
+If we run the same whithout any changes on docker image repository, it will skip the creation and build
 
 ~~~
  PLAY [Building Docker Image and container from git] *****************************************************************************************************************************************
