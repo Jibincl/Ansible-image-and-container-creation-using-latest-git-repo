@@ -8,7 +8,7 @@
       - git
       - pip
       - docker
-    repo_url: "https://github.com/Jibincl/devops-flask.git"
+    repo_url: "https://github.com/Jibincl/git-flask-app.git"
     repo_dir: "/home/ec2-user/flaskapp/"
     docker_user: "jibincl"
     docker_password: "dEe5SH2ujB58ezt"
